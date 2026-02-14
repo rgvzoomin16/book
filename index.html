@@ -100,82 +100,17 @@
       <button id="next">Next ▶</button>
     </div>
 
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "./node_modules/three/build/three.module.js"
-        }
-      }
-    </script>
-
     <script type="module">
-      let THREE;
-      let OrbitControls;
+      import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+      import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
-      async function loadThree() {
-        try {
-          THREE = await import('./node_modules/three/build/three.module.js');
-          ({ OrbitControls } = await import('./node_modules/three/examples/jsm/controls/OrbitControls.js'));
-          return;
-        } catch (localError) {
-          console.warn('Local Three.js import failed, falling back to CDN.', localError);
-        }
+      const TOTAL_PAGES = 30;
+      const BOOK_WIDTH = 5.4;
+      const BOOK_HEIGHT = 3.5;
+      const PAGE_THICKNESS = 0.017;
+      const SPINE_OFFSET = -BOOK_WIDTH / 2;
 
-        THREE = await import('https://esm.sh/three@0.160.0');
-        ({ OrbitControls } = await import('https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js'));
-      }
-
-      function showError(message) {
-        const el = document.createElement('div');
-        el.style.position = 'fixed';
-        el.style.top = '50%';
-        el.style.left = '50%';
-        el.style.transform = 'translate(-50%, -50%)';
-        el.style.padding = '0.9rem 1.1rem';
-        el.style.borderRadius = '12px';
-        el.style.border = '1px solid rgba(176, 129, 175, 0.5)';
-        el.style.background = 'rgba(255,255,255,0.85)';
-        el.style.color = '#6f4f83';
-        el.style.maxWidth = 'min(90vw, 700px)';
-        el.style.textAlign = 'center';
-        el.style.fontWeight = '600';
-        el.textContent = message;
-        document.body.appendChild(el);
-      }
-
-      function drawRoundedRect(ctx, x, y, width, height, radius) {
-        if (typeof ctx.roundRect === 'function') {
-          ctx.beginPath();
-          ctx.roundRect(x, y, width, height, radius);
-          ctx.fill();
-          return;
-        }
-
-        const r = Math.min(radius, width / 2, height / 2);
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + width - r, y);
-        ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-        ctx.lineTo(x + width, y + height - r);
-        ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-        ctx.lineTo(x + r, y + height);
-        ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      async function main() {
-        await loadThree();
-
-        const TOTAL_PAGES = 30;
-        const BOOK_WIDTH = 5.4;
-        const BOOK_HEIGHT = 3.5;
-        const PAGE_THICKNESS = 0.017;
-        const SPINE_OFFSET = -BOOK_WIDTH / 2;
-
-        const LOVE_CONTENT = `Love is an emotion involving strong attraction, affection, emotional attachment or concern for a person, animal, or thing. It is expressed in many forms, from deep interpersonal affection to simple pleasure. The love of a mother differs from the love of a spouse, which differs from the love of food. Love is considered both positive and negative: its virtue represents kindness, compassion, and affection; its vice can represent vanity, selfishness, and egotism. Love can describe compassionate actions toward other humans, oneself, or animals. In many forms, love facilitates interpersonal relationships and is one of the most common themes in the creative arts.
+      const LOVE_CONTENT = `Love is an emotion involving strong attraction, affection, emotional attachment or concern for a person, animal, or thing. It is expressed in many forms, from deep interpersonal affection to simple pleasure. The love of a mother differs from the love of a spouse, which differs from the love of food. Love is considered both positive and negative: its virtue represents kindness, compassion, and affection; its vice can represent vanity, selfishness, and egotism. Love can describe compassionate actions toward other humans, oneself, or animals. In many forms, love facilitates interpersonal relationships and is one of the most common themes in the creative arts.
 
 Ancient Greek philosophers identified six forms of love: storge (familial), philia (friendship), eros (romantic), philautia (self-love), xenia (guest love), and agape (divine or unconditional love). Modern authors add further forms such as companionate love, consummate love, unrequited love, obsessive love, and courtly love. Many cultures include unique expressions for love that are hard to translate directly. The triangular theory of love suggests intimacy, passion, and commitment as core components.
 
@@ -189,279 +124,275 @@ Psychological theories describe love through components and behavior. Sternberg'
 
 Evolutionary perspectives propose that love supports pair bonding, parenting, and social cooperation. It may help sustain long-term partnerships and improve offspring survival. Comparative models in biology and psychology differ in emphasis, but both suggest love is central to human experience and social life.`;
 
-        const container = document.getElementById('book-app');
-        const statusText = document.getElementById('status');
-        const prevBtn = document.getElementById('prev');
-        const nextBtn = document.getElementById('next');
+      const container = document.getElementById('book-app');
+      const statusText = document.getElementById('status');
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
 
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0xfff6fc, 8, 22);
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0xfff6fc, 8, 22);
 
-        const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 80);
-        camera.position.set(0, 2.7, 8.5);
+      const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 80);
+      camera.position.set(0, 2.7, 8.5);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        container.appendChild(renderer.domElement);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      container.appendChild(renderer.domElement);
 
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
-        controls.enableZoom = false;
-        controls.minPolarAngle = 0.95;
-        controls.maxPolarAngle = 1.25;
-        controls.target.set(0, 0.6, 0);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enablePan = false;
+      controls.enableZoom = false;
+      controls.minPolarAngle = 0.95;
+      controls.maxPolarAngle = 1.25;
+      controls.target.set(0, 0.6, 0);
 
-        const ambient = new THREE.AmbientLight(0xfff7fd, 1.3);
-        scene.add(ambient);
+      const ambient = new THREE.AmbientLight(0xfff7fd, 1.3);
+      scene.add(ambient);
 
-        const key = new THREE.DirectionalLight(0xffffff, 0.95);
-        key.position.set(5, 7, 6);
-        scene.add(key);
+      const key = new THREE.DirectionalLight(0xffffff, 0.95);
+      key.position.set(5, 7, 6);
+      scene.add(key);
 
-        const fill = new THREE.PointLight(0xfce8ff, 0.7, 20);
-        fill.position.set(-4, 2.5, 2.5);
-        scene.add(fill);
+      const fill = new THREE.PointLight(0xfce8ff, 0.7, 20);
+      fill.position.set(-4, 2.5, 2.5);
+      scene.add(fill);
 
-        const bookGroup = new THREE.Group();
-        scene.add(bookGroup);
+      const bookGroup = new THREE.Group();
+      scene.add(bookGroup);
 
-        const coverGeometry = new THREE.BoxGeometry(BOOK_WIDTH + 0.12, BOOK_HEIGHT + 0.12, 0.32);
-        const coverMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0xf5e2f1,
-          roughness: 0.52,
-          clearcoat: 0.25,
-          clearcoatRoughness: 0.4,
-        });
-        const cover = new THREE.Mesh(coverGeometry, coverMaterial);
-        cover.position.set(0, 0, -0.21);
-        bookGroup.add(cover);
+      const coverGeometry = new THREE.BoxGeometry(BOOK_WIDTH + 0.12, BOOK_HEIGHT + 0.12, 0.32);
+      const coverMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xf5e2f1,
+        roughness: 0.52,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.4,
+      });
+      const cover = new THREE.Mesh(coverGeometry, coverMaterial);
+      cover.position.set(0, 0, -0.21);
+      bookGroup.add(cover);
 
-        const pageGeometry = new THREE.BoxGeometry(BOOK_WIDTH, BOOK_HEIGHT, PAGE_THICKNESS);
-        const pages = [];
-        let currentPage = 0;
+      const pageGeometry = new THREE.BoxGeometry(BOOK_WIDTH, BOOK_HEIGHT, PAGE_THICKNESS);
+      const pages = [];
+      let currentPage = 0;
 
-        function paginateText(text, pageCount) {
-          const words = text.replace(/\s+/g, ' ').trim().split(' ');
-          const wordsPerPage = Math.ceil(words.length / pageCount);
-          const chunks = [];
-          for (let i = 0; i < pageCount; i += 1) {
-            const slice = words.slice(i * wordsPerPage, (i + 1) * wordsPerPage).join(' ');
-            chunks.push(slice || '');
+      function paginateText(text, pageCount) {
+        const words = text.replace(/\s+/g, ' ').trim().split(' ');
+        const wordsPerPage = Math.ceil(words.length / pageCount);
+        const chunks = [];
+        for (let i = 0; i < pageCount; i += 1) {
+          const slice = words.slice(i * wordsPerPage, (i + 1) * wordsPerPage).join(' ');
+          chunks.push(slice || '');
+        }
+        return chunks;
+      }
+
+      const pageTextChunks = paginateText(LOVE_CONTENT, TOTAL_PAGES);
+
+      function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+
+        words.forEach((word) => {
+          const testLine = line ? `${line} ${word}` : word;
+          if (ctx.measureText(testLine).width > maxWidth) {
+            if (line) lines.push(line);
+            line = word;
+          } else {
+            line = testLine;
           }
-          return chunks;
-        }
-
-        const pageTextChunks = paginateText(LOVE_CONTENT, TOTAL_PAGES);
-
-        function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
-          const words = text.split(' ');
-          const lines = [];
-          let line = '';
-
-          words.forEach((word) => {
-            const testLine = line ? `${line} ${word}` : word;
-            if (ctx.measureText(testLine).width > maxWidth) {
-              if (line) lines.push(line);
-              line = word;
-            } else {
-              line = testLine;
-            }
-          });
-
-          if (line) lines.push(line);
-
-          const visibleLines = lines.slice(0, maxLines);
-          visibleLines.forEach((item, idx) => {
-            ctx.fillText(item, x, y + idx * lineHeight);
-          });
-        }
-
-        function makeButterflyTexture(index) {
-          const size = 1024;
-          const canvas = document.createElement('canvas');
-          canvas.width = size;
-          canvas.height = size;
-          const ctx = canvas.getContext('2d');
-
-          const gradients = [
-            ['#fff6fb', '#f5f7ff'],
-            ['#f8f8ff', '#f0fff8'],
-            ['#fff9f2', '#f1f2ff'],
-            ['#f6fff4', '#fdf4ff'],
-          ];
-          const [start, end] = gradients[index % gradients.length];
-          const bg = ctx.createLinearGradient(0, 0, size, size);
-          bg.addColorStop(0, start);
-          bg.addColorStop(1, end);
-          ctx.fillStyle = bg;
-          ctx.fillRect(0, 0, size, size);
-
-          const flowers = 22;
-          const petals = ['#ffd9ef', '#ffcfe2', '#ffe4ba', '#d7f7d9', '#d7e9ff', '#ead7ff'];
-          for (let i = 0; i < flowers; i += 1) {
-            const x = 90 + Math.random() * (size - 180);
-            const y = 90 + Math.random() * (size - 180);
-            const radius = 16 + Math.random() * 25;
-            const petalColor = petals[(i + index) % petals.length];
-            for (let p = 0; p < 6; p += 1) {
-              const angle = (Math.PI * 2 * p) / 6;
-              ctx.beginPath();
-              ctx.ellipse(
-                x + Math.cos(angle) * radius * 0.88,
-                y + Math.sin(angle) * radius * 0.88,
-                radius * 0.7,
-                radius * 0.38,
-                angle,
-                0,
-                Math.PI * 2,
-              );
-              ctx.fillStyle = petalColor;
-              ctx.fill();
-            }
-            ctx.beginPath();
-            ctx.arc(x, y, radius * 0.33, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff5a9';
-            ctx.fill();
-          }
-
-          const butterflies = 14;
-          for (let i = 0; i < butterflies; i += 1) {
-            const x = 110 + Math.random() * (size - 220);
-            const y = 110 + Math.random() * (size - 220);
-            const wing = 18 + Math.random() * 21;
-            const tone = ['#ffd1ec', '#d5e5ff', '#ddffd9', '#ffe8cb', '#e9dcff'][(i + index) % 5];
-            const bodyTone = '#9b84b4';
-
-            ctx.fillStyle = tone;
-            ctx.beginPath();
-            ctx.ellipse(x - wing * 0.55, y - 5, wing, wing * 0.72, -0.45, 0, Math.PI * 2);
-            ctx.ellipse(x + wing * 0.55, y - 5, wing, wing * 0.72, 0.45, 0, Math.PI * 2);
-            ctx.ellipse(x - wing * 0.5, y + 10, wing * 0.75, wing * 0.52, -0.1, 0, Math.PI * 2);
-            ctx.ellipse(x + wing * 0.5, y + 10, wing * 0.75, wing * 0.52, 0.1, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = bodyTone;
-            drawRoundedRect(ctx, x - 2.5, y - 15, 5, 31, 3);
-
-            ctx.strokeStyle = '#bfa8dd';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x - 1, y - 15);
-            ctx.quadraticCurveTo(x - 9, y - 29, x - 14, y - 34);
-            ctx.moveTo(x + 1, y - 15);
-            ctx.quadraticCurveTo(x + 9, y - 29, x + 14, y - 34);
-            ctx.stroke();
-          }
-
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.56)';
-          ctx.fillRect(60, 120, size - 120, size - 250);
-
-          ctx.fillStyle = 'rgba(103, 86, 137, 0.9)';
-          ctx.font = '600 30px Trebuchet MS';
-          ctx.textAlign = 'left';
-          ctx.fillText('Love Notes', 92, 170);
-
-          ctx.fillStyle = 'rgba(96, 84, 128, 0.88)';
-          ctx.font = '24px Trebuchet MS';
-          drawWrappedText(ctx, pageTextChunks[index], 92, 220, size - 190, 33, 19);
-
-          const pageLabel = `Page ${index + 1} / ${TOTAL_PAGES}`;
-          ctx.fillStyle = 'rgba(96, 84, 128, 0.8)';
-          ctx.font = 'bold 44px Trebuchet MS';
-          ctx.textAlign = 'center';
-          ctx.fillText(pageLabel, size / 2, size - 70);
-
-          const texture = new THREE.CanvasTexture(canvas);
-          texture.colorSpace = THREE.SRGBColorSpace;
-          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-          return texture;
-        }
-
-        function createPage(index) {
-          const texture = makeButterflyTexture(index);
-          const paperSide = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.72, metalness: 0.02 });
-          const pageEdge = new THREE.MeshStandardMaterial({ color: 0xfff9f8, roughness: 0.83 });
-
-          const page = new THREE.Mesh(pageGeometry, [pageEdge, pageEdge, pageEdge, pageEdge, paperSide, paperSide]);
-          page.position.set(0, 0, index * PAGE_THICKNESS * 0.62);
-          page.castShadow = false;
-          page.receiveShadow = false;
-
-          const pivot = new THREE.Group();
-          pivot.position.set(SPINE_OFFSET, 0, 0);
-          page.position.x = BOOK_WIDTH / 2;
-          pivot.add(page);
-          bookGroup.add(pivot);
-
-          pages.push({ pivot, target: 0, index });
-        }
-
-        for (let i = 0; i < TOTAL_PAGES; i += 1) {
-          createPage(i);
-        }
-
-        function setPage(index) {
-          currentPage = Math.max(0, Math.min(TOTAL_PAGES, index));
-          pages.forEach((page, i) => {
-            page.target = i < currentPage ? -Math.PI : 0;
-          });
-          statusText.textContent = `Page ${Math.min(currentPage + 1, TOTAL_PAGES)} / ${TOTAL_PAGES}`;
-        }
-
-        setPage(0);
-
-        prevBtn.addEventListener('click', () => setPage(currentPage - 1));
-        nextBtn.addEventListener('click', () => setPage(currentPage + 1));
-
-        let pointerDown = false;
-        let lastX = 0;
-        renderer.domElement.addEventListener('pointerdown', (event) => {
-          pointerDown = true;
-          lastX = event.clientX;
         });
 
-        window.addEventListener('pointerup', () => {
-          pointerDown = false;
-        });
+        if (line) lines.push(line);
 
-        window.addEventListener('pointermove', (event) => {
-          if (!pointerDown) return;
-          const delta = event.clientX - lastX;
-          if (Math.abs(delta) < 50) return;
-          setPage(currentPage + (delta < 0 ? 1 : -1));
-          lastX = event.clientX;
-        });
-
-        const clock = new THREE.Clock();
-        function animate() {
-          const t = clock.getElapsedTime();
-          pages.forEach((page, i) => {
-            const depthOffset = (TOTAL_PAGES - i) * 0.0003;
-            page.pivot.rotation.y += (page.target - page.pivot.rotation.y) * 0.115;
-            page.pivot.position.z = i * PAGE_THICKNESS * 0.2 + depthOffset;
-          });
-
-          bookGroup.rotation.x = Math.sin(t * 0.55) * 0.018;
-          bookGroup.rotation.y = Math.sin(t * 0.3) * 0.09;
-
-          controls.update();
-          renderer.render(scene, camera);
-          requestAnimationFrame(animate);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
+        const visibleLines = lines.slice(0, maxLines);
+        visibleLines.forEach((item, idx) => {
+          ctx.fillText(item, x, y + idx * lineHeight);
         });
       }
 
-      main().catch((err) => {
-        console.error(err);
-        showError('Unable to load 3D book right now. Check network/CDN access or run with local three.js files.');
+      function makeButterflyTexture(index) {
+        const size = 1024;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const gradients = [
+          ['#fff6fb', '#f5f7ff'],
+          ['#f8f8ff', '#f0fff8'],
+          ['#fff9f2', '#f1f2ff'],
+          ['#f6fff4', '#fdf4ff'],
+        ];
+        const [start, end] = gradients[index % gradients.length];
+        const bg = ctx.createLinearGradient(0, 0, size, size);
+        bg.addColorStop(0, start);
+        bg.addColorStop(1, end);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, size, size);
+
+        const flowers = 22;
+        const petals = ['#ffd9ef', '#ffcfe2', '#ffe4ba', '#d7f7d9', '#d7e9ff', '#ead7ff'];
+        for (let i = 0; i < flowers; i += 1) {
+          const x = 90 + Math.random() * (size - 180);
+          const y = 90 + Math.random() * (size - 180);
+          const radius = 16 + Math.random() * 25;
+          const petalColor = petals[(i + index) % petals.length];
+          for (let p = 0; p < 6; p += 1) {
+            const angle = (Math.PI * 2 * p) / 6;
+            ctx.beginPath();
+            ctx.ellipse(
+              x + Math.cos(angle) * radius * 0.88,
+              y + Math.sin(angle) * radius * 0.88,
+              radius * 0.7,
+              radius * 0.38,
+              angle,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fillStyle = petalColor;
+            ctx.fill();
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, radius * 0.33, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff5a9';
+          ctx.fill();
+        }
+
+        const butterflies = 14;
+        for (let i = 0; i < butterflies; i += 1) {
+          const x = 110 + Math.random() * (size - 220);
+          const y = 110 + Math.random() * (size - 220);
+          const wing = 18 + Math.random() * 21;
+          const tone = ['#ffd1ec', '#d5e5ff', '#ddffd9', '#ffe8cb', '#e9dcff'][(i + index) % 5];
+          const bodyTone = '#9b84b4';
+
+          ctx.fillStyle = tone;
+          ctx.beginPath();
+          ctx.ellipse(x - wing * 0.55, y - 5, wing, wing * 0.72, -0.45, 0, Math.PI * 2);
+          ctx.ellipse(x + wing * 0.55, y - 5, wing, wing * 0.72, 0.45, 0, Math.PI * 2);
+          ctx.ellipse(x - wing * 0.5, y + 10, wing * 0.75, wing * 0.52, -0.1, 0, Math.PI * 2);
+          ctx.ellipse(x + wing * 0.5, y + 10, wing * 0.75, wing * 0.52, 0.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = bodyTone;
+          ctx.beginPath();
+          ctx.roundRect(x - 2.5, y - 15, 5, 31, 3);
+          ctx.fill();
+
+          ctx.strokeStyle = '#bfa8dd';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x - 1, y - 15);
+          ctx.quadraticCurveTo(x - 9, y - 29, x - 14, y - 34);
+          ctx.moveTo(x + 1, y - 15);
+          ctx.quadraticCurveTo(x + 9, y - 29, x + 14, y - 34);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.56)';
+        ctx.fillRect(60, 120, size - 120, size - 250);
+
+        ctx.fillStyle = 'rgba(103, 86, 137, 0.9)';
+        ctx.font = '600 30px Trebuchet MS';
+        ctx.textAlign = 'left';
+        ctx.fillText('Love Notes', 92, 170);
+
+        ctx.fillStyle = 'rgba(96, 84, 128, 0.88)';
+        ctx.font = '24px Trebuchet MS';
+        drawWrappedText(ctx, pageTextChunks[index], 92, 220, size - 190, 33, 19);
+
+        const pageLabel = `Page ${index + 1} / ${TOTAL_PAGES}`;
+        ctx.fillStyle = 'rgba(96, 84, 128, 0.8)';
+        ctx.font = 'bold 44px Trebuchet MS';
+        ctx.textAlign = 'center';
+        ctx.fillText(pageLabel, size / 2, size - 70);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return texture;
+      }
+
+      function createPage(index) {
+        const texture = makeButterflyTexture(index);
+        const paperSide = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.72, metalness: 0.02 });
+        const pageEdge = new THREE.MeshStandardMaterial({ color: 0xfff9f8, roughness: 0.83 });
+
+        const page = new THREE.Mesh(pageGeometry, [pageEdge, pageEdge, pageEdge, pageEdge, paperSide, paperSide]);
+        page.position.set(0, 0, index * PAGE_THICKNESS * 0.62);
+        page.castShadow = false;
+        page.receiveShadow = false;
+
+        const pivot = new THREE.Group();
+        pivot.position.set(SPINE_OFFSET, 0, 0);
+        page.position.x = BOOK_WIDTH / 2;
+        pivot.add(page);
+        bookGroup.add(pivot);
+
+        pages.push({ pivot, target: 0, index });
+      }
+
+      for (let i = 0; i < TOTAL_PAGES; i += 1) {
+        createPage(i);
+      }
+
+      function setPage(index) {
+        currentPage = Math.max(0, Math.min(TOTAL_PAGES, index));
+        pages.forEach((page, i) => {
+          page.target = i < currentPage ? -Math.PI : 0;
+        });
+        statusText.textContent = `Page ${Math.min(currentPage + 1, TOTAL_PAGES)} / ${TOTAL_PAGES}`;
+      }
+
+      setPage(0);
+
+      prevBtn.addEventListener('click', () => setPage(currentPage - 1));
+      nextBtn.addEventListener('click', () => setPage(currentPage + 1));
+
+      let pointerDown = false;
+      let lastX = 0;
+      renderer.domElement.addEventListener('pointerdown', (event) => {
+        pointerDown = true;
+        lastX = event.clientX;
+      });
+
+      window.addEventListener('pointerup', () => {
+        pointerDown = false;
+      });
+
+      window.addEventListener('pointermove', (event) => {
+        if (!pointerDown) return;
+        const delta = event.clientX - lastX;
+        if (Math.abs(delta) < 50) return;
+        setPage(currentPage + (delta < 0 ? 1 : -1));
+        lastX = event.clientX;
+      });
+
+      const clock = new THREE.Clock();
+      function animate() {
+        const t = clock.getElapsedTime();
+        pages.forEach((page, i) => {
+          const depthOffset = (TOTAL_PAGES - i) * 0.0003;
+          page.pivot.rotation.y += (page.target - page.pivot.rotation.y) * 0.115;
+          page.pivot.position.z = i * PAGE_THICKNESS * 0.2 + depthOffset;
+        });
+
+        bookGroup.rotation.x = Math.sin(t * 0.55) * 0.018;
+        bookGroup.rotation.y = Math.sin(t * 0.3) * 0.09;
+
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
       });
     </script>
   </body>
