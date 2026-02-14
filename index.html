@@ -110,6 +110,20 @@
       const PAGE_THICKNESS = 0.017;
       const SPINE_OFFSET = -BOOK_WIDTH / 2;
 
+      const LOVE_CONTENT = `Love is an emotion involving strong attraction, affection, emotional attachment or concern for a person, animal, or thing. It is expressed in many forms, from deep interpersonal affection to simple pleasure. The love of a mother differs from the love of a spouse, which differs from the love of food. Love is considered both positive and negative: its virtue represents kindness, compassion, and affection; its vice can represent vanity, selfishness, and egotism. Love can describe compassionate actions toward other humans, oneself, or animals. In many forms, love facilitates interpersonal relationships and is one of the most common themes in the creative arts.
+
+Ancient Greek philosophers identified six forms of love: storge (familial), philia (friendship), eros (romantic), philautia (self-love), xenia (guest love), and agape (divine or unconditional love). Modern authors add further forms such as companionate love, consummate love, unrequited love, obsessive love, and courtly love. Many cultures include unique expressions for love that are hard to translate directly. The triangular theory of love suggests intimacy, passion, and commitment as core components.
+
+The word "love" has many related meanings in different contexts, and cultural differences make a universal definition difficult. Love is often contrasted with hate, lust, or friendship depending on context. Abstractly, love usually refers to a feeling one person experiences for another and often involves care, identification, and vulnerability. Ideas about love have changed over time, from classical and medieval traditions to modern psychology.
+
+Philosophers and thinkers have offered many definitions. Thomas Aquinas described love as willing the good of another. Leibniz described love as delight in another's happiness. Some thinkers describe love as active commitment rather than passive feeling. Others frame love as unconditional selflessness. Love has also been described in impersonal forms, including love of causes, principles, objects, animals, and activities.
+
+Interpersonal love refers to love between people and is often stronger than simple liking. It can exist between family members, friends, and couples. Psychology and biology both study love. Biological models often treat romantic love as a drive system, similar to hunger or thirst, involving lust, attraction, and attachment. These phases are associated with different hormones and neurochemicals such as dopamine, oxytocin, and vasopressin.
+
+Psychological theories describe love through components and behavior. Sternberg's model includes intimacy, passion, and commitment, producing forms such as romantic love, companionate love, and consummate love. Erich Fromm argued love is a disciplined practice and commitment over time, not merely an emotion. Many researchers also describe love as a basic human need that supports development, attachment, and well-being.
+
+Evolutionary perspectives propose that love supports pair bonding, parenting, and social cooperation. It may help sustain long-term partnerships and improve offspring survival. Comparative models in biology and psychology differ in emphasis, but both suggest love is central to human experience and social life.`;
+
       const container = document.getElementById('book-app');
       const statusText = document.getElementById('status');
       const prevBtn = document.getElementById('prev');
@@ -162,6 +176,42 @@
       const pageGeometry = new THREE.BoxGeometry(BOOK_WIDTH, BOOK_HEIGHT, PAGE_THICKNESS);
       const pages = [];
       let currentPage = 0;
+
+      function paginateText(text, pageCount) {
+        const words = text.replace(/\s+/g, ' ').trim().split(' ');
+        const wordsPerPage = Math.ceil(words.length / pageCount);
+        const chunks = [];
+        for (let i = 0; i < pageCount; i += 1) {
+          const slice = words.slice(i * wordsPerPage, (i + 1) * wordsPerPage).join(' ');
+          chunks.push(slice || '');
+        }
+        return chunks;
+      }
+
+      const pageTextChunks = paginateText(LOVE_CONTENT, TOTAL_PAGES);
+
+      function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+
+        words.forEach((word) => {
+          const testLine = line ? `${line} ${word}` : word;
+          if (ctx.measureText(testLine).width > maxWidth) {
+            if (line) lines.push(line);
+            line = word;
+          } else {
+            line = testLine;
+          }
+        });
+
+        if (line) lines.push(line);
+
+        const visibleLines = lines.slice(0, maxLines);
+        visibleLines.forEach((item, idx) => {
+          ctx.fillText(item, x, y + idx * lineHeight);
+        });
+      }
 
       function makeButterflyTexture(index) {
         const size = 1024;
@@ -242,9 +292,21 @@
           ctx.stroke();
         }
 
-        const pageLabel = `Page ${index + 1}`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.56)';
+        ctx.fillRect(60, 120, size - 120, size - 250);
+
+        ctx.fillStyle = 'rgba(103, 86, 137, 0.9)';
+        ctx.font = '600 30px Trebuchet MS';
+        ctx.textAlign = 'left';
+        ctx.fillText('Love Notes', 92, 170);
+
+        ctx.fillStyle = 'rgba(96, 84, 128, 0.88)';
+        ctx.font = '24px Trebuchet MS';
+        drawWrappedText(ctx, pageTextChunks[index], 92, 220, size - 190, 33, 19);
+
+        const pageLabel = `Page ${index + 1} / ${TOTAL_PAGES}`;
         ctx.fillStyle = 'rgba(96, 84, 128, 0.8)';
-        ctx.font = 'bold 56px Trebuchet MS';
+        ctx.font = 'bold 44px Trebuchet MS';
         ctx.textAlign = 'center';
         ctx.fillText(pageLabel, size / 2, size - 70);
 
