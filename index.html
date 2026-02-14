@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floral Butterfly 3D Book</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --blush: #f9eef6;
+        --lavender: #efe8fb;
+        --sky: #eaf7ff;
+        --mint: #ecfff7;
+        --text: #5c5370;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+        background: radial-gradient(circle at 15% 20%, var(--mint), transparent 30%),
+          radial-gradient(circle at 80% 15%, var(--lavender), transparent 25%),
+          radial-gradient(circle at 50% 90%, var(--sky), transparent 35%),
+          linear-gradient(160deg, #fff8fc, var(--blush));
+        color: var(--text);
+      }
+
+      #book-app {
+        position: fixed;
+        inset: 0;
+      }
+
+      .panel {
+        position: fixed;
+        left: 50%;
+        bottom: 1.25rem;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(183, 157, 208, 0.4);
+        border-radius: 999px;
+        padding: 0.55rem 0.8rem;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 25px rgba(159, 133, 192, 0.2);
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.45rem 1rem;
+        background: linear-gradient(120deg, #f8ddf2, #ddeffd);
+        color: #6f5d8d;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 12px rgba(146, 127, 175, 0.26);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      #status {
+        min-width: 8ch;
+        text-align: center;
+        font-size: 0.95rem;
+      }
+
+      .hint {
+        position: fixed;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(179, 156, 214, 0.35);
+        border-radius: 999px;
+        padding: 0.45rem 0.85rem;
+        font-size: 0.88rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="book-app"></div>
+    <div class="hint">Drag horizontally to turn pages • Light pastel floral theme</div>
+    <div class="panel">
+      <button id="prev">◀ Previous</button>
+      <span id="status">Page 1 / 30</span>
+      <button id="next">Next ▶</button>
+    </div>
+
+    <script type="module">
+      import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+      import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+      const TOTAL_PAGES = 30;
+      const BOOK_WIDTH = 5.4;
+      const BOOK_HEIGHT = 3.5;
+      const PAGE_THICKNESS = 0.017;
+      const SPINE_OFFSET = -BOOK_WIDTH / 2;
+
+      const container = document.getElementById('book-app');
+      const statusText = document.getElementById('status');
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0xfff6fc, 8, 22);
+
+      const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 80);
+      camera.position.set(0, 2.7, 8.5);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      container.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enablePan = false;
+      controls.enableZoom = false;
+      controls.minPolarAngle = 0.95;
+      controls.maxPolarAngle = 1.25;
+      controls.target.set(0, 0.6, 0);
+
+      const ambient = new THREE.AmbientLight(0xfff7fd, 1.3);
+      scene.add(ambient);
+
+      const key = new THREE.DirectionalLight(0xffffff, 0.95);
+      key.position.set(5, 7, 6);
+      scene.add(key);
+
+      const fill = new THREE.PointLight(0xfce8ff, 0.7, 20);
+      fill.position.set(-4, 2.5, 2.5);
+      scene.add(fill);
+
+      const bookGroup = new THREE.Group();
+      scene.add(bookGroup);
+
+      const coverGeometry = new THREE.BoxGeometry(BOOK_WIDTH + 0.12, BOOK_HEIGHT + 0.12, 0.32);
+      const coverMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xf5e2f1,
+        roughness: 0.52,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.4,
+      });
+      const cover = new THREE.Mesh(coverGeometry, coverMaterial);
+      cover.position.set(0, 0, -0.21);
+      bookGroup.add(cover);
+
+      const pageGeometry = new THREE.BoxGeometry(BOOK_WIDTH, BOOK_HEIGHT, PAGE_THICKNESS);
+      const pages = [];
+      let currentPage = 0;
+
+      function makeButterflyTexture(index) {
+        const size = 1024;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const gradients = [
+          ['#fff6fb', '#f5f7ff'],
+          ['#f8f8ff', '#f0fff8'],
+          ['#fff9f2', '#f1f2ff'],
+          ['#f6fff4', '#fdf4ff'],
+        ];
+        const [start, end] = gradients[index % gradients.length];
+        const bg = ctx.createLinearGradient(0, 0, size, size);
+        bg.addColorStop(0, start);
+        bg.addColorStop(1, end);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, size, size);
+
+        const flowers = 22;
+        const petals = ['#ffd9ef', '#ffcfe2', '#ffe4ba', '#d7f7d9', '#d7e9ff', '#ead7ff'];
+        for (let i = 0; i < flowers; i += 1) {
+          const x = 90 + Math.random() * (size - 180);
+          const y = 90 + Math.random() * (size - 180);
+          const radius = 16 + Math.random() * 25;
+          const petalColor = petals[(i + index) % petals.length];
+          for (let p = 0; p < 6; p += 1) {
+            const angle = (Math.PI * 2 * p) / 6;
+            ctx.beginPath();
+            ctx.ellipse(
+              x + Math.cos(angle) * radius * 0.88,
+              y + Math.sin(angle) * radius * 0.88,
+              radius * 0.7,
+              radius * 0.38,
+              angle,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fillStyle = petalColor;
+            ctx.fill();
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, radius * 0.33, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff5a9';
+          ctx.fill();
+        }
+
+        const butterflies = 14;
+        for (let i = 0; i < butterflies; i += 1) {
+          const x = 110 + Math.random() * (size - 220);
+          const y = 110 + Math.random() * (size - 220);
+          const wing = 18 + Math.random() * 21;
+          const tone = ['#ffd1ec', '#d5e5ff', '#ddffd9', '#ffe8cb', '#e9dcff'][(i + index) % 5];
+          const bodyTone = '#9b84b4';
+
+          ctx.fillStyle = tone;
+          ctx.beginPath();
+          ctx.ellipse(x - wing * 0.55, y - 5, wing, wing * 0.72, -0.45, 0, Math.PI * 2);
+          ctx.ellipse(x + wing * 0.55, y - 5, wing, wing * 0.72, 0.45, 0, Math.PI * 2);
+          ctx.ellipse(x - wing * 0.5, y + 10, wing * 0.75, wing * 0.52, -0.1, 0, Math.PI * 2);
+          ctx.ellipse(x + wing * 0.5, y + 10, wing * 0.75, wing * 0.52, 0.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = bodyTone;
+          ctx.beginPath();
+          ctx.roundRect(x - 2.5, y - 15, 5, 31, 3);
+          ctx.fill();
+
+          ctx.strokeStyle = '#bfa8dd';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x - 1, y - 15);
+          ctx.quadraticCurveTo(x - 9, y - 29, x - 14, y - 34);
+          ctx.moveTo(x + 1, y - 15);
+          ctx.quadraticCurveTo(x + 9, y - 29, x + 14, y - 34);
+          ctx.stroke();
+        }
+
+        const pageLabel = `Page ${index + 1}`;
+        ctx.fillStyle = 'rgba(96, 84, 128, 0.8)';
+        ctx.font = 'bold 56px Trebuchet MS';
+        ctx.textAlign = 'center';
+        ctx.fillText(pageLabel, size / 2, size - 70);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return texture;
+      }
+
+      function createPage(index) {
+        const texture = makeButterflyTexture(index);
+        const paperSide = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.72, metalness: 0.02 });
+        const pageEdge = new THREE.MeshStandardMaterial({ color: 0xfff9f8, roughness: 0.83 });
+
+        const page = new THREE.Mesh(pageGeometry, [pageEdge, pageEdge, pageEdge, pageEdge, paperSide, paperSide]);
+        page.position.set(0, 0, index * PAGE_THICKNESS * 0.62);
+        page.castShadow = false;
+        page.receiveShadow = false;
+
+        const pivot = new THREE.Group();
+        pivot.position.set(SPINE_OFFSET, 0, 0);
+        page.position.x = BOOK_WIDTH / 2;
+        pivot.add(page);
+        bookGroup.add(pivot);
+
+        pages.push({ pivot, target: 0, index });
+      }
+
+      for (let i = 0; i < TOTAL_PAGES; i += 1) {
+        createPage(i);
+      }
+
+      function setPage(index) {
+        currentPage = Math.max(0, Math.min(TOTAL_PAGES, index));
+        pages.forEach((page, i) => {
+          page.target = i < currentPage ? -Math.PI : 0;
+        });
+        statusText.textContent = `Page ${Math.min(currentPage + 1, TOTAL_PAGES)} / ${TOTAL_PAGES}`;
+      }
+
+      setPage(0);
+
+      prevBtn.addEventListener('click', () => setPage(currentPage - 1));
+      nextBtn.addEventListener('click', () => setPage(currentPage + 1));
+
+      let pointerDown = false;
+      let lastX = 0;
+      renderer.domElement.addEventListener('pointerdown', (event) => {
+        pointerDown = true;
+        lastX = event.clientX;
+      });
+
+      window.addEventListener('pointerup', () => {
+        pointerDown = false;
+      });
+
+      window.addEventListener('pointermove', (event) => {
+        if (!pointerDown) return;
+        const delta = event.clientX - lastX;
+        if (Math.abs(delta) < 50) return;
+        setPage(currentPage + (delta < 0 ? 1 : -1));
+        lastX = event.clientX;
+      });
+
+      const clock = new THREE.Clock();
+      function animate() {
+        const t = clock.getElapsedTime();
+        pages.forEach((page, i) => {
+          const depthOffset = (TOTAL_PAGES - i) * 0.0003;
+          page.pivot.rotation.y += (page.target - page.pivot.rotation.y) * 0.115;
+          page.pivot.position.z = i * PAGE_THICKNESS * 0.2 + depthOffset;
+        });
+
+        bookGroup.rotation.x = Math.sin(t * 0.55) * 0.018;
+        bookGroup.rotation.y = Math.sin(t * 0.3) * 0.09;
+
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    </script>
+  </body>
+</html>
